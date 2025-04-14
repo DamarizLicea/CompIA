@@ -34,6 +34,7 @@ Por ahora, el enfoque está en optimizar un solo tipo de aumento antes de añadi
 Aumenté el número de épocas de entrenamiento de 10 a 100, lo cual representa un cambio importante en el ciclo de pruebas.
 
 ### Gráficos de precisión
+
 Antes de modificar el data_augmentation:
 
 ![image](https://github.com/user-attachments/assets/6af0b676-5c32-4dc0-b62a-5f6dc140547e)
@@ -43,10 +44,12 @@ Después de la modificación agresiva:
 ![image](https://github.com/user-attachments/assets/e1ca6bf7-e3be-4687-8d2c-aff2bf254c59)
 
 Con ajustes menos agresivos:
+
 ![image](https://github.com/user-attachments/assets/20704f3d-f9d4-455a-b995-f69e89f9ac38)
 
 
-Referencias
+### Referencias
+
 [Ref1] Paper sobre clasificación de mariposas con más de 100 clases:
 https://dl.futuretechsci.org/id/eprint/73/1/9443-Article%20Text-30154-5-10-20240615.pdf
 
