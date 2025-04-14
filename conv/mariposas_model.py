@@ -23,12 +23,29 @@ from tensorflow.keras.preprocessing import image
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout, RandomFlip, RandomRotation, RandomZoom
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.layers import RandomBrightness, RandomContrast, RandomSaturation, RandomHue
 
 from google.colab import drive
 drive.mount('/content/drive')
 
 # Commented out IPython magic to ensure Python compatibility.
 # %cd "/content/drive/MyDrive/tc3002/mairposas"
+
+tf.random.set_seed(42)
+np.random.seed(42)
+
+# Use gpu
+gpu = len(tf.config.list_physical_devices('GPU'))>0
+print("GPU is", "available" if gpu else "NOT AVAILABLE")
+
+try:
+    device_name = tf.test.gpu_device_name()
+    if device_name != '/device:GPU:0':
+        raise SystemError('GPU device not found')
+    print('Found GPU at: {}'.format(device_name))
+
+except  SystemError as e:
+    print(e)
 
 """Este código fue elaborado en Google Colab, por lo tanto el ruteo no corresponde a las carpetas del repositorio."""
 
@@ -45,9 +62,21 @@ df = pd.read_csv(train_labels_path)
 df['filepaths'] = df['filename'].apply(lambda x: os.path.join(train_dir, x))
 label_to_index = {label: idx for idx, label in enumerate(df['label'].unique())}
 df['label_idx'] = df['label'].map(label_to_index)
+print(f"Total de etiquetas: {len(label_to_index)}")
 
-# Separar 80% para training y 20% para testing
-train_df, test_df = train_test_split(df, test_size=0.2, stratify=df['label_idx'], random_state=42)
+# División en 80% entrenamiento, 10% validación y 10% prueba
+# Primero separamos 80% para entrenamiento y 20% para temp
+train_df, aux_df = train_test_split(df, test_size=0.2, stratify=df['label_idx'], random_state=42)
+
+# Luego dividimos ese 20% en dos partes iguales (10% y 10% del total)
+valid_df, test_df = train_test_split(aux_df, test_size=0.5, stratify=aux_df['label_idx'], random_state=42)
+
+#Cambio en la ultima versión, separar aux para tener test y val, no solo test
+print(f"Tamaño del conjunto de entrenamiento: {len(train_df)} imágenes ({len(train_df)/len(df):.1%})")
+print(f"Tamaño del conjunto de validación: {len(valid_df)} imágenes ({len(valid_df)/len(df):.1%})")
+print(f"Tamaño del conjunto de prueba: {len(test_df)} imágenes ({len(test_df)/len(df):.1%})")
+
+
 IMG_SIZE = (128, 128)
 BATCH_SIZE = 32
 
@@ -55,7 +84,7 @@ BATCH_SIZE = 32
 def df_to_dataset(dataframe, shuffle=True):
     path_ds = tf.data.Dataset.from_tensor_slices(dataframe['filepaths'].values)
     label_ds = tf.data.Dataset.from_tensor_slices(dataframe['label_idx'].values)
-    img_ds = path_ds.map(lambda x: tf.image.resize(tf.image.decode_jpeg(tf.io.read_file(x), channels=3), IMG_SIZE)/255.0)
+    img_ds = path_ds.map(lambda x: tf.image.resize(tf.image.decode_jpeg(tf.io.read_file(x), channels=3), IMG_SIZE)/255.0) #imagenes de 128x128 en tres colores
     ds = tf.data.Dataset.zip((img_ds, label_ds))
     if shuffle:
         ds = ds.shuffle(buffer_size=len(dataframe))
@@ -67,19 +96,23 @@ test_ds = df_to_dataset(test_df, shuffle=False)
 # Aumentación: Volteo horizontal, rotación y zoom
 data_augmentation = Sequential([
     RandomFlip("horizontal"),
-    RandomRotation(0.1),
-    RandomZoom(0.1),
-])
+    RandomRotation(0.1), #Es en grados. Acuerdate de 2Pi Radianes.
+    RandomZoom(0.1), #Zoom in 10%
+    RandomBrightness(factor=0.1), #Color Jitter pero poco elegante
+    RandomContrast(factor=0.1),
+    RandomSaturation(factor=0.05),
+    RandomHue(factor=0.05), #Le bajé en todos estos parámetros de .2 a 0.05 o así
+  ])
 
 # CNN
 # 2 capas convolucionales, 2 capas de pooling, 1 capa densa
 model = Sequential([
     data_augmentation,
-    Conv2D(32, 3, activation='relu', input_shape=(128, 128, 3)),
-    MaxPooling2D(),
+    Conv2D(32, 3, activation='relu', input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3)), #32 filtros de 3x3 pix-> buscas patrones, cambios
+    MaxPooling2D(), # como que lo pasa por la capa chiquita-> si la imag era de 6x6 ahora la analizas en 2x2
     Conv2D(64, 3, activation='relu'),
     MaxPooling2D(),
-    Flatten(),
+    Flatten(),# vector
     Dense(128, activation='relu'),
     Dense(len(label_to_index), activation='softmax')
 ])
@@ -105,8 +138,9 @@ plt.title('Pérdida')
 plt.legend()
 plt.show()
 
-# Función para ver visualmente qué hace el modelo
-# ahorita solo pone una imagen fija que le das, que es la 2
+# Función para ver visualmente qué hace el modelo, esta función solo es para mí para entender.
+# ahorita solo predice una imagen fija que le das.
+
 
 def predict_image(img_path):
     img = Image.open(img_path).resize(IMG_SIZE)
@@ -129,5 +163,47 @@ def predict_image(img_path):
     plt.suptitle(f"Real {real_name} ")
     plt.show()
 
-predict_image(df.iloc[1]['filepaths'])
-predict_image(df.iloc[2]['filepaths'])
+predict_image(df.iloc[6]['filepaths'])
+predict_image(df.iloc[3]['filepaths'])
+
+def confusion_matrix_manual(model, dataset, num_classes):
+    matrix = [[0 for _ in range(num_classes)] for _ in range(num_classes)]
+
+    for batch_images, batch_labels in dataset:
+        predictions = model.predict(batch_images, verbose=0)
+        predicted_classes = np.argmax(predictions, axis=1)
+
+        true_classes = batch_labels.numpy()
+
+        for true, pred in zip(true_classes, predicted_classes):
+            matrix[true][pred] += 1
+
+    return matrix
+
+
+num_classes = len(label_to_index)
+matriz = confusion_matrix_manual(model, test_ds, num_classes)
+
+
+def simple_confusion(matrix):
+    correctas = sum(matrix[i][i] for i in range(len(matrix)))
+    total = sum(sum(row) for row in matrix)
+    incorrectas = total - correctas
+    print("\nResumen de Clasificación:")
+    print(f"Aciertos (Correctos): {correctas}")
+    print(f"Errores (Incorrectos): {incorrectas}")
+    print(f"Precisión global: {correctas / total:.2%}")
+
+
+def resumen_tp_fp_fn_tn(matrix):
+    num_classes = len(matrix)
+    print("\nMatriz TP/FP/FN/TN por clase:")
+    for i in range(num_classes):
+        TP = matrix[i][i]
+        FN = sum(matrix[i]) - TP
+        FP = sum(matrix[j][i] for j in range(num_classes)) - TP
+        TN = sum(sum(matrix[j]) for j in range(num_classes)) - (TP + FP + FN)
+        print(f"Clase {i} -> TP: {TP}, FP: {FP}, FN: {FN}, TN: {TN}")
+
+simple_confusion(matriz)
+resumen_tp_fp_fn_tn(matriz)
