@@ -1,9 +1,11 @@
-V1 — Semana del 31 de marzo al 4 de abril
+# V1 — Semana del 31 de marzo al 4 de abril
+
 Accuracy promedio de 0.5.
 
 El modelo fue capaz de detectar al menos una clase correctamente.
 
-V2 — Semana del 7 al 11 de abril
+# V2 — Semana del 7 al 11 de abril
+
 Implementé una versión personalizada de ColorJitter inspirada en (Ref2), con el objetivo de hacer el data_augmentation más robusto.
 Sin embargo, el accuracy cayó de 0.5 a un máximo de 0.02, con fluctuaciones muy abruptas y comportamiento inestable.
 
@@ -15,7 +17,7 @@ Se reorganizó la distribución del dataset para reflejar mejores prácticas:
 
 10% prueba
 
-Distribución actual del dataset:
+### Distribución actual del dataset:
 
 Total de etiquetas: 75 clases
 
@@ -31,7 +33,7 @@ Por ahora, el enfoque está en optimizar un solo tipo de aumento antes de añadi
 
 Aumenté el número de épocas de entrenamiento de 10 a 100, lo cual representa un cambio importante en el ciclo de pruebas.
 
-Gráficos de precisión
+### Gráficos de precisión
 Antes de modificar el data_augmentation:
 
 ![image](https://github.com/user-attachments/assets/6af0b676-5c32-4dc0-b62a-5f6dc140547e)
