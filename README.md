@@ -3,6 +3,8 @@
 
 Damariz Licea Carrisoza A01369045
 
+Ruta al codigo: https://github.com/DamarizLicea/CompIA/blob/main/conv/noticiasvf.ipynb
+
 ## Abstract
 Este trabajo presenta un enfoque para la clasificación de titulares de noticias mediante una red neuronal convolucional (CNN), complementado con técnicas de aumento de datos basadas en sinónimos a través de WordNet. Utilizando el "News Category Dataset", el proyecto abarca desde la limpieza de texto hasta la evaluación del modelo, implementando procesos de tokenización, embeddings y convoluciones, con métricas transparentes para el investigador. 
 
